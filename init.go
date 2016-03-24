@@ -13,6 +13,12 @@ import (
 // TODO: Is this the best we can do?
 const DownloadUrlTemplate = "https://bitbucket.org/rude/love/downloads/%s"
 
+const MAIN_LUA = `
+function love.draw()
+    love.graphics.print("Hello World", 400, 300)
+end
+`
+
 var fileNameMappings = map[string]string{
 	Win32: "win32",
 	Win64: "win64",
@@ -23,6 +29,7 @@ var fileNameMappings = map[string]string{
 func RunInitCommand(config *Config) {
 	downloadLoveDistributions(config.LoveVersion, config.TargetPlatforms)
 	extractLoveDistributions(config.LoveVersion, config.TargetPlatforms)
+	createHelloWorld()
 }
 
 func downloadLoveDistributions(version string, platforms []string) {
@@ -145,4 +152,14 @@ func unzip(archive, target string) error {
 	}
 
 	return nil
+}
+
+func createHelloWorld() {
+	mainLua, err := os.Create("main.lua")
+	if err != nil {
+		panic(err)
+	}
+	defer mainLua.Close()
+
+	mainLua.Write([]byte(MAIN_LUA))
 }
