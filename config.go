@@ -2,6 +2,8 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -30,18 +32,38 @@ var DefaultConfig = Config{
 	TargetPlatforms: []string{Mac},
 }
 
-func LoadConfig(configFile string) *Config {
-	config := readOrDefaultConfig(configFile)
+func LoadConfig(configFile string) (*Config, error) {
+	config, err := readOrDefaultConfig(configFile)
 	// TODO: Do sanity checks on the config here
-	return &config
+	return config, err
 }
 
-func readOrDefaultConfig(configFile string) Config {
+func readOrDefaultConfig(configFile string) (*Config, error) {
+	if configFile == "" {
+		configFile = ".lover.yaml"
+		if _, statErr := os.Stat(configFile); os.IsNotExist(statErr) {
+			config := DefaultConfig
+			// TODO: Prompt for missing values (project name, description, etc)?
+			configBytes, marshalErr := yaml.Marshal(config)
+			if marshalErr != nil {
+				return nil, marshalErr
+			}
+			ioutil.WriteFile(configFile, configBytes, 0644)
+		}
+	}
+
+	return readConfig(configFile)
+}
+
+func readConfig(configFile string) (*Config, error) {
 	fileContents, readErr := ioutil.ReadFile(configFile)
 	if readErr != nil {
-		return DefaultConfig
+		return nil, readErr
 	}
-	// TODO: Read in the config file as a YAML file and set it here
-	fileContents = fileContents[:]
-	return DefaultConfig
+	var config Config
+	unmarshalErr := yaml.Unmarshal(fileContents[:], &config)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return &config, nil
 }

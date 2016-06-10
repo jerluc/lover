@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
     "github.com/spf13/cobra"
 )
 
@@ -10,10 +12,17 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use: "lover",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			config = LoadConfig(configFile)
+			loadedConfig, configErr := LoadConfig(configFile)
+			if configErr != nil {
+				fmt.Println("Failed to load lover configuration:", configErr)
+				os.Exit(127)
+			}
+			// This is really stupid...
+			// TODO: Let's not use this silly CLI library
+			config = loadedConfig
 		},
 	}
-    rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", ".lover.yaml", "Configuration file")
+    rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "Configuration file")
 
 	var cmdInit = &cobra.Command{
         Use:   "init",

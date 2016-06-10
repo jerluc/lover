@@ -13,8 +13,7 @@ import (
 // TODO: Is this the best we can do?
 const DownloadUrlTemplate = "https://bitbucket.org/rude/love/downloads/%s"
 
-const MAIN_LUA = `
-function love.draw()
+const MAIN_LUA = `function love.draw()
     love.graphics.print("Hello World", 400, 300)
 end
 `
@@ -151,7 +150,7 @@ func unzip(archive, target string) error {
 		}
 	}
 
-	return nil
+	return os.Remove(archive)
 }
 
 func createHelloWorld() {
