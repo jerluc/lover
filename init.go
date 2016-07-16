@@ -8,10 +8,26 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"text/template"
 )
 
 // TODO: Is this the best we can do?
 const DownloadUrlTemplate = "https://bitbucket.org/rude/love/downloads/%s"
+
+const CONF_LUA = `function love.conf(t)
+    -- Package settings
+    t.identity = "{{.Name}}"
+    t.title = "{{.Name}}"
+    t.version = "{{.LoveVersion}}"
+
+    -- Window/display settings
+    t.window.width = 800
+    t.window.height = 600
+    t.window.fullscreen = false
+    t.window.fullscreentype = "desktop"
+    t.window.highdpi = false
+end
+`
 
 const MAIN_LUA = `function love.draw()
     love.graphics.print("Hello World", 400, 300)
@@ -28,7 +44,8 @@ var fileNameMappings = map[string]string{
 func RunInitCommand(config *Config) {
 	downloadLoveDistributions(config.LoveVersion, config.TargetPlatforms)
 	extractLoveDistributions(config.LoveVersion, config.TargetPlatforms)
-	createHelloWorld()
+	createDefaultFile(config, "conf.lua", CONF_LUA)
+	createDefaultFile(config, "main.lua", MAIN_LUA)
 }
 
 func downloadLoveDistributions(version string, platforms []string) {
@@ -60,7 +77,7 @@ func downloadLoveDistribution(version string, platform string, reporter func(err
 
 	// Only proceed if there isn't already a distro with the same
 	// version and platform
-	if _, err := os.Stat(localFilePath); err == nil {
+	if _, err := os.Stat(localFilePath); !os.IsNotExist(err) {
 		reporter(nil)
 		return
 	}
@@ -150,15 +167,28 @@ func unzip(archive, target string) error {
 		}
 	}
 
-	return os.Remove(archive)
+	// TODO: It's important to not remove the original file so as to not duplicate distro
+	// downloading. We should put this back in once that behavior is fixed
+	// return os.Remove(archive)
+	return nil
 }
 
-func createHelloWorld() {
-	mainLua, err := os.Create("main.lua")
-	if err != nil {
-		panic(err)
-	}
-	defer mainLua.Close()
+func createDefaultFile(config *Config, path, contents string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		mainLua, err := os.Create(path)
+		if err != nil {
+			panic(err)
+		}
+		defer mainLua.Close()
 
-	mainLua.Write([]byte(MAIN_LUA))
+		tmpl, err := template.New("test").Parse(contents)
+		if err != nil {
+			panic(err)
+		}
+
+		err = tmpl.Execute(mainLua, config)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
