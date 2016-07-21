@@ -55,6 +55,5 @@ At the moment, lover only supports OS X for automating project setup, but can st
 
 * `init` support for more platforms!
 * Prompting for lover configuration inputs (project name, description, etc)
-* Autogeneration of a templated `config.lua` file
 * Automated distribution/packaging for multiple platforms
 * Auto-reloading project on file change
