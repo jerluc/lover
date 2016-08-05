@@ -20,9 +20,9 @@ Options:
   -h, --help  Show this message and exit.
 
 Commands:
-  dist  Creates a distributable binary
+  dist  Packages your project for distribution
   new   Creates a new LOVE project
-  run   Runs the current LOVE project
+  run   Runs your project
 ```
 
 ### Commands
@@ -39,6 +39,13 @@ world" `main.lua`.
 
 Runs your current project using your platform-specific LOVE distribution
 and the version configured in your [.lover.yaml](#configuration-file).
+
+#### `dist`
+
+Packages your current project into a distributable binary package for
+the platforms specified in your [.lover.yaml](#configuration-file).
+
+Note that this only supports macOS packaging at the moment.
 
 #### Configuration file
 
