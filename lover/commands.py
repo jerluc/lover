@@ -30,6 +30,6 @@ def dist(env, targets):
     procs = multiprocessing.Pool(4)
     procs.map(functools.partial(love.get, env), targets)
     love.archive(env)
-    # TODO: Do packaging here
+    procs.map(functools.partial(love.package, env), targets)
     return 0
 

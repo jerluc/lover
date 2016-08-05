@@ -74,6 +74,13 @@ class Env(object):
             'dist'
         )
 
+    @property
+    def love_file(self):
+        return os.path.join(
+            self.dist_dir,
+            self.conf.identifier + '.love'
+        )
+
     def output_dir(self, platform=None, love_version=None):
         if not platform:
             platform = self.platform

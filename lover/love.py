@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import os.path
+import plistlib
 import shutil
 import stat
 import tempfile
 
 import requests
 from pyunpack import Archive
+
+import lover.platforms as platforms
 
 
 # Templates for conf.lua and main.lua files
@@ -110,9 +113,8 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 
 def archive(env):
-    love_file = os.path.join(env.dist_dir, env.conf.identifier)
-    print('Archiving LOVE project \'%s\' into %s.love...' %
-            (env.conf.identifier, os.path.relpath(love_file)))
+    print('Archiving LOVE project \'%s\' into %s...' %
+            (env.conf.identifier, os.path.relpath(env.love_file)))
     # Archives the project directory into a .love file
     if not os.path.exists(env.dist_dir):
         os.makedirs(env.dist_dir)
@@ -122,10 +124,45 @@ def archive(env):
     ignore = shutil.ignore_patterns('^.git', '.svn', '.DS_Store')
     tmp_dir = tempfile.mkdtemp()
     copytree(env.project_dir, tmp_dir, ignore=ignore)
-    shutil.make_archive(love_file, 'zip', tmp_dir)
+    shutil.make_archive(env.love_file, 'zip', tmp_dir)
     shutil.rmtree(tmp_dir)
 
-    # Renames to .love
-    os.rename(love_file + '.zip', love_file + '.love')
+    # Renames to .love, since shutil.make_archive() adds .zip
+    os.rename(env.love_file + '.zip', env.love_file)
     print('Archival complete!')
+
+
+def package(env, platform):
+    print('Packaging LOVE project \'%s\' for platform \'%s\'...' %
+            (env.conf.identifier, platform))
+    if platform != platforms.MACOS:
+        print('Packaging only works on macOS right now :(')
+        print('Skipping packaging for platform \'%s\'' % platform)
+        return
+
+    # TODO: Move this platform-specific behavior into platforms?
+    # Get the original love.app file
+    love_dir = env.love_dir(platform=platform)
+    love_app = os.path.join(love_dir, 'love.app')
+
+    # Copy the love.app file into the output directory with project name
+    output_dir = env.output_dir(platform=platform)
+    output_app = os.path.join(output_dir, env.conf.identifier + '.app')
+    if os.path.exists(output_app):
+        shutil.rmtree(output_app)
+    shutil.copytree(love_app, output_app)
+
+    # Copy the archived .love file into the new .app
+    res = os.path.join(output_app, 'Contents', 'Resources')
+    shutil.copy(env.love_file, res)
+
+    # Modify the Info.plist file per the LOVE wiki instructions
+    # https://love2d.org/wiki/Game_Distribution
+    plist_file = os.path.join(output_app, 'Contents', 'Info.plist')
+    plist = plistlib.readPlist(plist_file)
+    plist['CFBundleIdentifier'] = env.conf.identifier
+    del plist['UTExportedTypeDeclarations']
+    plistlib.writePlist(plist, plist_file)
+
+    print('Packaging complete!')
 
