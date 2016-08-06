@@ -134,8 +134,7 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 
 def archive(env):
-    print('Archiving LOVE project \'%s\' into %s...' %
-            (env.conf.identifier, os.path.relpath(env.love_file)))
+    print('Archiving LOVE project \'%s\'...' % env.conf.identifier)
     # Archives the project directory into a .love file
     if not os.path.exists(env.dist_dir):
         os.makedirs(env.dist_dir)
@@ -180,6 +179,9 @@ def package(env, platform):
         plist['CFBundleIdentifier'] = env.conf.identifier
         del plist['UTExportedTypeDeclarations']
         plistlib.writePlist(plist, plist_file)
+
+        # So we can tell the user where it is
+        dest = output_app
     if platform in (platforms.WIN32, platforms.WIN64):
         # Copy the original love directory contents
         copied_dir = os.path.join(output_dir, env.conf.identifier)
@@ -203,6 +205,11 @@ def package(env, platform):
         shutil.make_archive(distro, 'zip', copied_dir)
         shutil.rmtree(copied_dir)
 
+        # So we can tell the user where it is
+        dest = distro + '.zip'
+
 
     print('Packaging complete!')
+    print('Saved distributable package to %s' % os.path.relpath(dest))
+    print('Now you can share the LÖVE :)')
 
