@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-import yaml
+import getpass
 import os
 import os.path
 
+import yaml
 from lover.platforms import get_current_platform
 
 
@@ -54,9 +55,9 @@ def get_input(prompt, default=None):
 
 def create_config(project_dir, config_file):
     identifier = get_input('Project idenitifer', default=project_dir)
-    name = get_input('Project name')
+    name = get_input('Project name', default=project_dir)
     desc = get_input('Project description', default='')
-    author = get_input('Your name')
+    author = get_input('Your name', default=getpass.getuser())
     love_version = get_input('LOVE version to use',
             default=LATEST_LOVE_VERSION)
 
