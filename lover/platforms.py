@@ -16,8 +16,8 @@ PLATFORM_DOWNLOAD_PATH = {
 }
 
 PLATFORM_EXECUTABLES = {
-    WIN32: ('love-%(love_version)s-win32', 'love.exe'),
-    WIN64: ('love-%(love_version)s-win64', 'love.exe'),
+    WIN32: ('love.exe',),
+    WIN64: ('love.exe',),
     MACOS: ('love.app', 'Contents', 'MacOS', 'love')
 }
 

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import glob
 import os.path
 import plistlib
 import shutil
@@ -49,7 +50,7 @@ def get(env, platform=None):
             print('Download complete!')
         print('Extracting LOVE (%s; %s)...' % (env.conf.love_version,
             platform))
-        extract(env.download_file(platform=platform))
+        extract(platform, env.download_file(platform=platform))
         st = os.stat(env.love_binary(platform=platform))
         os.chmod(env.love_binary(platform=platform),
                 st.st_mode | stat.S_IEXEC)
@@ -70,11 +71,22 @@ def download(download_url, local_file):
                 f.write(chunk)
 
 
-def extract(local_file):
+# TODO: Move this into platforms?
+def post_extract(extracted_dir, platform):
+    if platform in (platforms.WIN32, platforms.WIN64):
+        extra_dir = glob.glob(os.path.join(extracted_dir,
+            'love-*-win*'))[0]
+        copytree(extra_dir, extracted_dir)
+        shutil.rmtree(extra_dir)
+
+
+def extract(platform, local_file):
     # Extract the downloaded local file into the same directory
     extracted_dir = os.path.dirname(local_file)
     Archive(local_file).extractall(extracted_dir)
 
+    # TODO: Move this into platforms?
+    post_extract(extracted_dir, platform)
 
 def setup_project_dir(env):
     # Creates conf.lua and main.lua files for the new project
@@ -93,6 +105,15 @@ def setup_project_dir(env):
     if not os.path.exists(main_lua_file):
         with open(main_lua_file, 'wb') as f:
             f.write(MAIN_LUA)
+
+
+# TODO: Put these ignores somewhere else?
+def ignored_files(dir, files):
+    dirname = os.path.basename(dir)
+    if dirname.startswith('.') or dirname == 'dist':
+        return files
+    else:
+        return []
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
@@ -120,10 +141,8 @@ def archive(env):
         os.makedirs(env.dist_dir)
 
     # Creates the .zip file
-    # TODO: Put these ignores somewhere else?
-    ignore = shutil.ignore_patterns('^.git', '.svn', '.DS_Store')
     tmp_dir = tempfile.mkdtemp()
-    copytree(env.project_dir, tmp_dir, ignore=ignore)
+    copytree(env.project_dir, tmp_dir, ignore=ignored_files)
     shutil.make_archive(env.love_file, 'zip', tmp_dir)
     shutil.rmtree(tmp_dir)
 
@@ -135,34 +154,55 @@ def archive(env):
 def package(env, platform):
     print('Packaging LOVE project \'%s\' for platform \'%s\'...' %
             (env.conf.identifier, platform))
-    if platform != platforms.MACOS:
-        print('Packaging only works on macOS right now :(')
-        print('Skipping packaging for platform \'%s\'' % platform)
-        return
+
+    love_dir = env.love_dir(platform=platform)
+    output_dir = env.output_dir(platform=platform)
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
 
     # TODO: Move this platform-specific behavior into platforms?
-    # Get the original love.app file
-    love_dir = env.love_dir(platform=platform)
-    love_app = os.path.join(love_dir, 'love.app')
+    if platform == platforms.MACOS:
+        # Get the original love.app file
+        love_app = os.path.join(love_dir, 'love.app')
 
-    # Copy the love.app file into the output directory with project name
-    output_dir = env.output_dir(platform=platform)
-    output_app = os.path.join(output_dir, env.conf.identifier + '.app')
-    if os.path.exists(output_app):
-        shutil.rmtree(output_app)
-    shutil.copytree(love_app, output_app)
+        # Copy the love.app file into the output directory with project name
+        output_app = os.path.join(output_dir, env.conf.identifier + '.app')
+        shutil.copytree(love_app, output_app)
 
-    # Copy the archived .love file into the new .app
-    res = os.path.join(output_app, 'Contents', 'Resources')
-    shutil.copy(env.love_file, res)
+        # Copy the archived .love file into the new .app
+        res = os.path.join(output_app, 'Contents', 'Resources')
+        shutil.copy(env.love_file, res)
 
-    # Modify the Info.plist file per the LOVE wiki instructions
-    # https://love2d.org/wiki/Game_Distribution
-    plist_file = os.path.join(output_app, 'Contents', 'Info.plist')
-    plist = plistlib.readPlist(plist_file)
-    plist['CFBundleIdentifier'] = env.conf.identifier
-    del plist['UTExportedTypeDeclarations']
-    plistlib.writePlist(plist, plist_file)
+        # Modify the Info.plist file per the LOVE wiki instructions
+        # https://love2d.org/wiki/Game_Distribution
+        plist_file = os.path.join(output_app, 'Contents', 'Info.plist')
+        plist = plistlib.readPlist(plist_file)
+        plist['CFBundleIdentifier'] = env.conf.identifier
+        del plist['UTExportedTypeDeclarations']
+        plistlib.writePlist(plist, plist_file)
+    if platform in (platforms.WIN32, platforms.WIN64):
+        # Copy the original love directory contents
+        copied_dir = os.path.join(output_dir, env.conf.identifier)
+        # This should ignore the original download .zip file
+        ignore = shutil.ignore_patterns('love*.zip')
+        shutil.copytree(love_dir, copied_dir, ignore=ignore)
+
+        # Concatenate .love file to the end of our love.exe copy
+        love_exe = os.path.join(copied_dir, 'love.exe')
+        with open(love_exe, 'ab') as f:
+            with open(env.love_file) as love_file:
+                f.write(love_file.read())
+
+        # Rename the love.exe copy to {IDENTIFIER}.exe
+        app_exe = os.path.join(copied_dir, '%s.exe' %
+            env.conf.identifier)
+        os.rename(love_exe, app_exe)
+
+        # Create .zip file from the copied directory and clean up
+        distro = os.path.join(output_dir, env.conf.identifier)
+        shutil.make_archive(distro, 'zip', copied_dir)
+        shutil.rmtree(copied_dir)
+
 
     print('Packaging complete!')
 
