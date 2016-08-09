@@ -6,9 +6,6 @@ import lover.platforms as platforms
 
 
 DOWNLOAD_TEMPLATE = 'https://bitbucket.org/rude/love/downloads/%s'
-# TODO: Put this into the lover.platforms package when we need to add
-# Linux support (as presently they are .deb files)
-DOWNLOAD_FILE_TEMPLATE = 'love-%s-%s.zip'
 
 
 class Env(object):
@@ -49,9 +46,7 @@ class Env(object):
             platform = self.platform
         if not love_version:
             love_version = self.conf.love_version
-        download_platform = platforms.PLATFORM_DOWNLOAD_PATH[platform]
-        download_file = DOWNLOAD_FILE_TEMPLATE % (love_version,
-                download_platform)
+        download_file = platforms.PLATFORM_DOWNLOAD_PATH[platform] % dict(love_version=love_version)
         return DOWNLOAD_TEMPLATE % download_file
 
     def download_file(self, platform=None, love_version=None):
@@ -59,9 +54,7 @@ class Env(object):
             platform = self.platform
         if not love_version:
             love_version = self.conf.love_version
-        download_platform = platforms.PLATFORM_DOWNLOAD_PATH[platform]
-        download_file = DOWNLOAD_FILE_TEMPLATE % (love_version,
-                download_platform)
+        download_file = platforms.PLATFORM_DOWNLOAD_PATH[platform] % dict(love_version=love_version)
         return os.path.join(
             self.love_dir(platform=platform, love_version=love_version),
             download_file
